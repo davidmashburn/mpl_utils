@@ -1,0 +1,9 @@
+# Ignore these auto-generated files:
+*.pyc
+*.pyo
+*~
+dist
+build
+zips
+mpl_utils.egg-info
+MANIFEST
