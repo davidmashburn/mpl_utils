@@ -46,9 +46,9 @@ def _nonefy_and_offset_lines(line_arr):
        (See nonefy_lines for more details)'''
     return _nonefy_lines((np.asanyarray(line_arr)-0.5).tolist())
 
-def plot_lines(line_list):
+def plot_lines(line_list, *args, **kwds):
     '''Plot a series of poly-lines'''
-    return xyplot(_nonefy_lines(line_list))
+    return xyplot(_nonefy_lines(line_list), *args, **kwds)
 
 _A = 0.5 # alpha level is 0.5
 COLOR_DICT = {'r': (1, 0, 0, _A), 'g': (0, 1, 0, _A), 'b': (0, 0, 1, _A),
@@ -60,6 +60,7 @@ def error_plot(time_axis, mean, err, color, label,
     ''''A combination of dplot and dfill to make an
         error-bounds plot with half-opacity flange'''
     fill_color = COLOR_DICT[color] if color in COLOR_DICT else color
+    time_axis, mean, err = map(np.asanyarray, [time_axis, mean, err])
     plt.fill_between(time_axis, mean - err, mean + err, color=fill_color)
     plt.plot(time_axis, mean, color, label=label, **kwds)
     if plot_outer_lines:
@@ -77,18 +78,21 @@ def circle(center, radius, *args, **kwds):
 def _get_report_pixel(arr):
     '''Get a function that can be passed to the
        'format_coord' method of a matplotlib axis'''
+    arr = np.asanyarray(arr)
     def report_pixel(x, y):
         s = arr.shape
-        x, y = int(x + 0.5), int(y + 0.5)
+        x, y = np.floor([x + 0.5, y + 0.5]).astype(np.int)
         xy_str = 'x={0} y={1}'.format(x, y)
         return xy_str + ('  value={0}'.format(arr[y, x])
-                         if 0 < x < s[1] and 0 < y < s[0] else '')
+                         if 0 <= x < s[1] and 0 <= y < s[0] else '')
     return report_pixel
 
 def imshow_array(arr, *args, **kwds):
     '''Just imshow with an automatic format_coord set.
+       Also, defaults to interpolation='nearest'
        This currently does not handle the "extent" keyword,
        but could in the future.'''
+    kwds['interpolation'] = kwds.pop('interpolation', 'nearest')
     im = plt.imshow(arr, *args, **kwds)
     plt.gca().format_coord = _get_report_pixel(arr)
     return im
@@ -109,5 +113,5 @@ def imshow_function(f, x, y, *args, **kwds):
     set_format_coord = kwds.pop('set_format_coord', True)
     im = plt.imshow(np.transpose(f(x, y))[::-1, :], *args, **kwds)
     if set_format_coord:
-        plt.gca().format_coord = lambda X, Y: 'x={0} y={1} value={2}'.format(X, Y, f(X, Y))
+        plt.gca().format_coord = lambda X, Y: 'value={0} x={1} y={2}'.format(f(X, Y), X, Y)
     return im

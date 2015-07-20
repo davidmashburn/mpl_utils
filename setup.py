@@ -16,8 +16,8 @@ setup(
     description='plotting utilites build around matplotlib',
     long_description=open('README.txt').read(),
     install_requires=[
-                      'numpy' >= 1.0,
-                      'matplotlib' >= 1.0,
-                      'np_utils' >= 0.3.3.0,
+                      'numpy>=1.0',
+                      'matplotlib>=1.0',
+                      'np_utils>=0.3.3.0',
                      ],
 )
