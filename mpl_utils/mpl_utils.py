@@ -1,9 +1,13 @@
 '''Yet another set of plotting utilites built on top of matplotlib.pyplot'''
 
 import numpy as np
+
+import matplotlib
 import matplotlib.pyplot as plt
 
-from np_utils import flatten, intersperse
+from np_utils import flatten, intersperse, doublewrap
+
+from functools import wraps
 
 def xylim((xmin, xmax), (ymin, ymax)):
     '''Set xlim and ylim AT THE SAME TIME'''
@@ -115,3 +119,118 @@ def imshow_function(f, x, y, *args, **kwds):
     if set_format_coord:
         plt.gca().format_coord = lambda X, Y: 'value={0} x={1} y={2}'.format(f(X, Y), X, Y)
     return im
+
+@doublewrap
+def plotting_decorator(f, **dec_kwds):
+    '''A decorator that adds figure manipulation and drawing to any plotting function
+       The decorated function takes the new kewword argument "figure"
+       which is an optional matplotlib Figure
+       Uses the "doublewrap" decorator method described here:
+       http://stackoverflow.com/questions/653368/how-to-create-a-python-decorator-that-can-be-used-either-with-or-without-paramet
+       allowing usage like:
+       @plotting_decorator
+       or
+       @plotting_decorator(figure=fig1, clf=True)
+       
+       non-star-arg version of the function signature:
+       wrap_plotting_function(f, figure=None, draw=True, clf=False)'''
+    
+    @wraps(f)
+    def new_f(*args, **kwds):
+        # fake default keyword args:
+        # first try the current calling function, then try the decorator, then use the default
+        _k = [('figure', None),
+              ('draw', True),
+              ('clf', False),
+              ('cla', False)]
+        figure, draw, clf, cla = [kwds.pop(s, dec_kwds.get(s, v))
+                                  for s, v in _k]
+        
+        # Change the figure to the one we want to use
+        if figure is not None:
+            oldfig = plt.gcf()
+            plt.figure(figure.number)
+        
+        # Clear the figure
+        if clf:
+            plt.clf()
+        
+        # Clear the axis
+        if cla:
+            plt.cla()
+        
+        # Perform the actual plotting operation
+        ret = f(*args, **kwds)
+        
+        # Draw
+        if draw:
+            plt.draw()
+        
+        # Change the figure back to the old one
+        if figure is not None:
+            plt.figure(oldfig.number)
+        
+        return ret
+    
+    return new_f
+
+def plot_or_update(obj, fun, *args, **kwds):
+    '''A functional tool for editing data within plots dynamically
+       and automatically, given some existing plot result.
+       
+       Either calls a plotting function or updates an existing plot:
+        * when obj is None, the plot funciton is called
+        * when obj is not None, the data is simply updated
+          (and other options are ignored)
+       
+       Support for specific plot types includes:
+        * plot
+        * imshow
+        * axhline, axvline
+       
+       plot has NO SUPPORT for missing values, so use with caution
+       
+       extra keyword "draw" is caught and used to enable or disable
+       auto-drawing the result (default is True)
+       
+       Call it like:
+       a = None
+       some loop or other context:
+            a = plot_or_update(a, someplotfunction, *plot_args, **plot_kwds)
+
+        Example usage:
+        a = None
+        for i in range(5)
+            a = plot_or_update(a, plt.plot, [1, 2, 3, 5, i], 'r*-')
+       '''
+    draw = kwds.pop('draw', True)
+    
+    # May need to turn this off in the future, but it seems right ;)
+    #kwds['animated'] = kwds.pop('animated', not matplotlib.is_interactive())
+    # Yeah, not so much :P
+    
+    if obj==None:
+        return fun(*args, **kwds)
+    
+    if fun == plt.plot:
+        obj = obj[0] if type(obj) is list else obj # This ONLY works with single-element lists
+        
+        # Mirror the way plot works:
+        # if only one argument is passed, this assumes that the x axis
+        # is uniform with steps of one
+        if len(args) == 1:
+            args = [range(len(args[0])), args[0]]
+        obj.set_data(*args)
+    elif fun == plt.axvline:
+        obj.set_xdata(*args)
+    elif fun == plt.axhline:
+        obj.set_ydata(*args)
+    elif fun == plt.imshow:
+        obj.set_data(*args)
+    else:
+        raise('Plot Function "{}" is not supported'.format(fun))
+    
+    if draw:
+        plt.draw()
+    
+    return obj
