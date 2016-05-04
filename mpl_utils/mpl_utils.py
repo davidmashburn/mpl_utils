@@ -79,6 +79,17 @@ def circle(center, radius, *args, **kwds):
     c = plt.Circle(center, radius, *args, **kwds)
     return plt.gca().add_artist(c)
 
+def _doubler(x):
+    return np.transpose([x,x]).flatten()
+
+def hist_trace(dat, bins, plot_style, x_axis=None, plot_function=plt.plot, **kwds):
+    '''Plot a histogram as a line plot
+       Passes plot_style and any kwds to plt.plot
+       Optionally save computation by passing in xax, which is computed as "_doubled" bins'''
+    h = np.histogram(dat, bins)[0]
+    x_axis = x_axis if x_axis is not None else _doubler(bins)[1:-1]
+    plot_function(x_axis, _doubler(h), plot_style, **kwds)
+
 def _get_report_pixel(arr):
     '''Get a function that can be passed to the
        'format_coord' method of a matplotlib axis'''
