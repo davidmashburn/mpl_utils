@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from np_utils import flatten, intersperse, doublewrap
+from np_utils import flatten, intersperse, doublewrap, addBorder
 
 from functools import wraps
 
@@ -82,13 +82,19 @@ def circle(center, radius, *args, **kwds):
 def _doubler(x):
     return np.transpose([x,x]).flatten()
 
-def hist_trace(dat, bins, plot_style, x_axis=None, plot_function=plt.plot, **kwds):
+def hist_trace(dat, bins, plot_style, x_axis=None, plot_function=plt.plot, norm=False, zero_ends=True, **kwds):
     '''Plot a histogram as a line plot
        Passes plot_style and any kwds to plt.plot
        Optionally save computation by passing in xax, which is computed as "_doubled" bins'''
     h = np.histogram(dat, bins)[0]
-    x_axis = x_axis if x_axis is not None else _doubler(bins)[1:-1]
-    plot_function(x_axis, _doubler(h), plot_style, **kwds)
+    h = h.astype(np.float) / len(dat) if norm else h
+    x_axis = (x_axis if x_axis is not None else
+              _doubler(bins) if zero_ends else
+              _doubler(bins)[1:-1])
+    dh = _doubler(h)
+    dh = addBorder(dh) if zero_ends else dh
+    assert len(x_axis) == len(dh), 'Lengths not same {} {}'.format(len(x_axis), len(dh))
+    plot_function(x_axis, dh, plot_style, **kwds)
 
 def _get_report_pixel(arr):
     '''Get a function that can be passed to the
