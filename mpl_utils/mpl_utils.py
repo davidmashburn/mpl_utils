@@ -9,8 +9,9 @@ from np_utils import flatten, intersperse, doublewrap, addBorder
 
 from functools import wraps
 
-def xylim((xmin, xmax), (ymin, ymax)):
+def xylim(xmin_xmax, ymin_ymax):
     '''Set xlim and ylim AT THE SAME TIME'''
+    (xmin, xmax), (ymin, ymax) = xmin_xmax, ymin_ymax
     plt.xlim(xmin, xmax)
     plt.ylim(ymin, ymax)
 
@@ -84,8 +85,16 @@ def _doubler(x):
 
 def hist_trace(dat, bins, plot_style, x_axis=None, plot_function=plt.plot, norm=False, zero_ends=True, **kwds):
     '''Plot a histogram as a line plot
-       Passes plot_style and any kwds to plt.plot
-       Optionally save computation by passing in xax, which is computed as "_doubled" bins'''
+
+    Passes plot_style and any kwds to plt.plot
+    Optionally save computation by passing in xax, which is computed as "_doubled" bins
+
+    This is deprecated because plt.hist has the option histtype='step'
+    that does the same thing.
+
+    This still might be useful (?) if you want to use string plotstyle arguments
+    or if you want to hack your own custom hist function.
+    '''
     h = np.histogram(dat, bins)[0]
     h = h.astype(np.float) / len(dat) if norm else h
     x_axis = (x_axis if x_axis is not None else
@@ -95,6 +104,18 @@ def hist_trace(dat, bins, plot_style, x_axis=None, plot_function=plt.plot, norm=
     dh = addBorder(dh) if zero_ends else dh
     assert len(x_axis) == len(dh), 'Lengths not same {} {}'.format(len(x_axis), len(dh))
     plot_function(x_axis, dh, plot_style, **kwds)
+
+def log_hist(x, log_bins, *args, **kwds):
+    '''Plot a histogram, but with the x-axis in log space.
+
+    log_bins takes three values and produces bins with np.logspace
+    After the plot, this sets x_scale to 'log'
+    '''
+    log_start, log_stop, n_bins = log_bins
+    h = plt.hist(x, bins=np.logspace(np.log10(log_start),np.log10(log_stop), n_bins))
+    plt.gca().set_xscale("log")
+    return h
+
 
 def _get_report_pixel(arr):
     '''Get a function that can be passed to the
